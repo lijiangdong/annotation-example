@@ -14,21 +14,38 @@ import java.lang.reflect.Proxy;
  */
 public class ViewInject {
 
+    private static Class<?> clazz;
+
     public static void inject(Activity activity){
 
+        //获取activity的Class类
+        clazz = activity.getClass();
         injectContent(activity);
         injectView(activity);
         injectEvent(activity);
     }
 
+    public static void unInject(){
+        clazz = null;
+    }
+
+    /**
+     * 对ContentView注解惊醒解析
+     * @param activity
+     */
     private static void injectContent(Activity activity){
-        Class<?> clazz = activity.getClass();
+
+        //取的Activity中的ContentView注解
         ContentView contentView = clazz.getAnnotation(ContentView.class);
         if (contentView != null){
+
+            //取出ContentView注解中的值
             int id = contentView.value();
             try {
-                Method method = clazz.getMethod("setContentView",Integer.TYPE);
-                method.invoke(activity,id);
+
+                //获取Activity中setContentView方法,执行setContentView方法为Activity设置ContentView
+                //在这一步中我们也可以直接使用 activity.setContentView(id) 来设置ContentView
+                clazz.getMethod("setContentView",Integer.TYPE).invoke(activity,id);
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
             } catch (InvocationTargetException e) {
@@ -39,8 +56,11 @@ public class ViewInject {
         }
     }
 
+    /**
+     * 对InjectView注解进行解析
+     * @param activity
+     */
     private static void injectView(Activity activity){
-        Class<?> clazz = activity.getClass();
 
         Field[] fields = clazz.getDeclaredFields();
         for (Field field : fields){
@@ -48,9 +68,14 @@ public class ViewInject {
             if (inject != null){
                 int id = inject.value();
                 try {
-                    Object view = activity.findViewById(id);
+                    //这一步中同样也能够使用 Object view = activity.findViewById(id) 来获取View
+                    Object view = clazz.getMethod("findViewById",Integer.TYPE).invoke(activity,id);
                     field.set(activity,view);
                 } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
                     e.printStackTrace();
                 }
             }
@@ -58,9 +83,12 @@ public class ViewInject {
         }
     }
 
+    /**
+     * 对OnClick注解进行解析
+     * @param activity
+     */
     private static void injectEvent(Activity activity){
 
-        Class<? extends Activity> clazz = activity.getClass();
         Method[] methods = clazz.getMethods();
 
         for (Method method : methods) {
@@ -69,14 +97,16 @@ public class ViewInject {
                 int[] ids = onClick.value();
                 MyInvocationHandler handler = new MyInvocationHandler(activity,method);
 
+                //通过Java中的动态代理来执行View.OnClickListener
                 Object listenerProxy = Proxy.newProxyInstance(
                         View.OnClickListener.class.getClassLoader(),
                         new Class<?>[] { View.OnClickListener.class }, handler);
                 for (int id : ids) {
 
                     try {
-                        View view = activity.findViewById(id);
-                        Method listenerMethod = view.getClass().getMethod("setOnClickListener", View.OnClickListener.class);
+                        Object view = clazz.getMethod("findViewById",Integer.TYPE).invoke(activity,id);
+                        Method listenerMethod = view.getClass()
+                                .getMethod("setOnClickListener", View.OnClickListener.class);
                         listenerMethod.invoke(view, listenerProxy);
                     } catch (NoSuchMethodException e) {
                         e.printStackTrace();
