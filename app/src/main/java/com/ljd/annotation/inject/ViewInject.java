@@ -16,8 +16,27 @@ public class ViewInject {
 
     public static void inject(Activity activity){
 
+        injectContent(activity);
         injectView(activity);
         injectEvent(activity);
+    }
+
+    private static void injectContent(Activity activity){
+        Class<?> clazz = activity.getClass();
+        ContentView contentView = clazz.getAnnotation(ContentView.class);
+        if (contentView != null){
+            int id = contentView.value();
+            try {
+                Method method = clazz.getMethod("setContentView",Integer.TYPE);
+                method.invoke(activity,id);
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void injectView(Activity activity){
@@ -47,16 +66,16 @@ public class ViewInject {
         for (Method method : methods) {
             OnClick onClick = method.getAnnotation(OnClick.class);
             if (onClick != null){
-                int[] viewIds = onClick.value();
+                int[] ids = onClick.value();
                 MyInvocationHandler handler = new MyInvocationHandler(activity,method);
 
                 Object listenerProxy = Proxy.newProxyInstance(
                         View.OnClickListener.class.getClassLoader(),
                         new Class<?>[] { View.OnClickListener.class }, handler);
-                for (int viewId : viewIds) {
+                for (int id : ids) {
 
                     try {
-                        View view = activity.findViewById(viewId);
+                        View view = activity.findViewById(id);
                         Method listenerMethod = view.getClass().getMethod("setOnClickListener", View.OnClickListener.class);
                         listenerMethod.invoke(view, listenerProxy);
                     } catch (NoSuchMethodException e) {

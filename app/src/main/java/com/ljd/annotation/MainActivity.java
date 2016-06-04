@@ -7,10 +7,13 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.ljd.annotation.inject.ContentView;
 import com.ljd.annotation.inject.Inject;
 import com.ljd.annotation.inject.OnClick;
 import com.ljd.annotation.inject.ViewInject;
 
+
+@ContentView(R.layout.activity_main)
 public class MainActivity extends AppCompatActivity {
 
     @Inject(R.id.test_text)
@@ -22,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         ViewInject.inject(this);
         textView.setText("hello word");
         button.setText("test");
